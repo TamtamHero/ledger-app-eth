@@ -144,8 +144,16 @@ union {
     rawDataContext_t rawDataContext;
 } dataContext;
 
+typedef enum {
+  APP_STATE_IDLE,
+  APP_STATE_SIGNING_TX,
+  APP_STATE_SIGNING_MESSAGE
+} app_state_t;
+
+
 volatile uint8_t dataAllowed;
 volatile uint8_t contractDetails;
+volatile uint8_t appState;
 volatile char addressSummary[32];
 volatile bool dataPresent;
 volatile bool tokenProvisioned;
@@ -194,6 +202,13 @@ const bagl_element_t* ui_menu_item_out_over(const bagl_element_t* e) {
   // the selection rectangle is after the none|touchable
   e = (const bagl_element_t*)(((unsigned int)e)+sizeof(bagl_element_t));
   return e;
+}
+
+void reset_app_context() {
+  appState = APP_STATE_IDLE;
+  currentTokenSet = false;
+  os_memset((uint8_t*)&txContext, 0, sizeof(txContext));
+  os_memset((uint8_t*)&tmpContent, 0, sizeof(tmpContent));
 }
 
 
@@ -1074,6 +1089,7 @@ unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e) {
     uint32_t tx = set_result_get_publicKey();
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
+    reset_app_context();
     // Send back the response, do not restart the event loop
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
     // Display back the original UX
@@ -1084,6 +1100,7 @@ unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e) {
 unsigned int io_seproxyhal_touch_address_cancel(const bagl_element_t *e) {
     G_io_apdu_buffer[0] = 0x69;
     G_io_apdu_buffer[1] = 0x85;
+    reset_app_context();
     // Send back the response, do not restart the event loop
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
     // Display back the original UX
@@ -1159,7 +1176,7 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     tx = 65;
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
-
+    reset_app_context();
     // Send back the response, do not restart the event loop
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
     // Display back the original UX
@@ -1168,6 +1185,7 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
 }
 
 unsigned int io_seproxyhal_touch_tx_cancel(const bagl_element_t *e) {
+    reset_app_context();
     G_io_apdu_buffer[0] = 0x69;
     G_io_apdu_buffer[1] = 0x85;
     // Send back the response, do not restart the event loop
@@ -1213,6 +1231,7 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
     tx = 65;
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
+    reset_app_context();
     // Send back the response, do not restart the event loop
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
     // Display back the original UX
@@ -1221,6 +1240,7 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
 }
 
 unsigned int io_seproxyhal_touch_signMessage_cancel(const bagl_element_t *e) {
+    reset_app_context();
     G_io_apdu_buffer[0] = 0x69;
     G_io_apdu_buffer[1] = 0x85;
     // Send back the response, do not restart the event loop
@@ -1243,12 +1263,14 @@ unsigned int io_seproxyhal_touch_data_ok(const bagl_element_t *e) {
         ui_idle();
         break;
     case USTREAM_FAULT:
-        io_seproxyhal_send_status(0x6A80);
+        reset_app_context();
+        io_seproxyhal_send_status(0x6A80);        
         ui_idle();
         break;
     default:
         PRINTF("Unexpected parser status\n");
-        io_seproxyhal_send_status(0x6A80);
+        reset_app_context();
+        io_seproxyhal_send_status(0x6A80);        
         ui_idle();
     }
 
@@ -1261,6 +1283,7 @@ unsigned int io_seproxyhal_touch_data_ok(const bagl_element_t *e) {
 
 
 unsigned int io_seproxyhal_touch_data_cancel(const bagl_element_t *e) {
+    reset_app_context();
     io_seproxyhal_send_status(0x6985);
     // Display back the original UX
     ui_idle();
@@ -1702,7 +1725,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t da
   uint32_t i;
   uint8_t bip32PathLength = *(dataBuffer++);
   cx_ecfp_private_key_t privateKey;    
-
+  reset_app_context();
   if ((bip32PathLength < 0x01) ||
       (bip32PathLength > MAX_BIP32_PATH)) {
     PRINTF("Invalid path\n");
@@ -1768,11 +1791,12 @@ void finalizeParsing(bool direct) {
   if (chainConfig->chainId != 0) {
     uint32_t v = getV(&tmpContent.txContent);
     if (chainConfig->chainId != v) {
+        reset_app_context();
         PRINTF("Invalid chainId %d expected %d\n", v, chainConfig->chainId);
         if (direct) {
             THROW(0x6A80);
         }
-        else {
+        else {            
             io_seproxyhal_send_status(0x6A80);
             ui_idle();
             return;
@@ -1794,8 +1818,9 @@ void finalizeParsing(bool direct) {
             tmpContent.txContent.value.length = 32;
         }
     }
-    else {
+    else {      
       if (dataPresent && !N_storage.dataAllowed) {
+          reset_app_context();
           PRINTF("Data field forbidden\n");
           if (direct) {
             THROW(0x6A80);
@@ -1932,6 +1957,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint16_t dataLength
   parserStatus_e txResult;
   uint32_t i;
   if (p1 == P1_FIRST) {
+    if (dataLength < 1) {
+      PRINTF("Invalid data\n");
+      THROW(0x6a80);
+    }    
+    if (appState != APP_STATE_IDLE) {
+      reset_app_context();
+    }
+    appState = APP_STATE_SIGNING_TX;    
     tmpCtx.transactionContext.pathLength = workBuffer[0];
     if ((tmpCtx.transactionContext.pathLength < 0x01) ||
         (tmpCtx.transactionContext.pathLength > MAX_BIP32_PATH)) {
@@ -1941,6 +1974,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint16_t dataLength
     workBuffer++;
     dataLength--;
     for (i = 0; i < tmpCtx.transactionContext.pathLength; i++) {
+      if (dataLength < 4) {
+        PRINTF("Invalid data\n");
+        THROW(0x6a80);
+      }      
       tmpCtx.transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
       workBuffer += 4;
       dataLength -= 4;
@@ -1955,6 +1992,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint16_t dataLength
   }
   if (p2 != 0) {
     THROW(0x6B00);
+  }
+  if ((p1 == P1_MORE) && (appState != APP_STATE_SIGNING_TX)) {
+    PRINTF("Signature not initialized\n");
+    THROW(0x6985);
   }
   if (txContext.currentField == TX_RLP_NONE) {
     PRINTF("Parser not initialized\n");
@@ -2008,6 +2049,14 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
     uint32_t base = 10;
     uint8_t pos = 0;
     uint32_t i;
+    if (dataLength < 1) {
+      PRINTF("Invalid data\n");
+      THROW(0x6a80);
+    }
+    if (appState != APP_STATE_IDLE) {
+      reset_app_context();
+    }
+    appState = APP_STATE_SIGNING_MESSAGE;    
     tmpCtx.messageSigningContext.pathLength = workBuffer[0];
     if ((tmpCtx.messageSigningContext.pathLength < 0x01) ||
         (tmpCtx.messageSigningContext.pathLength > MAX_BIP32_PATH)) {
@@ -2017,16 +2066,24 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
     workBuffer++;
     dataLength--;
     for (i = 0; i < tmpCtx.messageSigningContext.pathLength; i++) {
+        if (dataLength < 4) {
+          PRINTF("Invalid data\n");
+          THROW(0x6a80);
+        }
         tmpCtx.messageSigningContext.bip32Path[i] = U4BE(workBuffer, 0);
         workBuffer += 4;
         dataLength -= 4;
     }
+    if (dataLength < 4) {
+      PRINTF("Invalid data\n");
+      THROW(0x6a80);
+    }    
     tmpCtx.messageSigningContext.remainingLength = U4BE(workBuffer, 0);
     workBuffer += 4;
     dataLength -= 4;
     // Initialize message header + length
     cx_keccak_init(&sha3, 256);
-    cx_hash((cx_hash_t *)&sha3, 0, SIGN_MAGIC, sizeof(SIGN_MAGIC) - 1, NULL);
+    cx_hash((cx_hash_t *)&sha3, 0, (uint8_t*)SIGN_MAGIC, sizeof(SIGN_MAGIC) - 1, NULL);
     for (index = 1; (((index * base) <= tmpCtx.messageSigningContext.remainingLength) &&
                          (((index * base) / base) == index));
              index *= base);
@@ -2034,7 +2091,7 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
       tmp[pos++] = '0' + ((tmpCtx.messageSigningContext.remainingLength / index) % base);
     }
     tmp[pos] = '\0';
-    cx_hash((cx_hash_t *)&sha3, 0, tmp, pos, NULL);
+    cx_hash((cx_hash_t *)&sha3, 0, (uint8_t*)tmp, pos, NULL);
     cx_sha256_init(&tmpContent.sha2);
   }
   else if (p1 != P1_MORE) {
@@ -2042,6 +2099,10 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
   }
   if (p2 != 0) {
     THROW(0x6B00);
+  }
+  if ((p1 == P1_MORE) && (appState != APP_STATE_SIGNING_MESSAGE)) {
+    PRINTF("Signature not initialized\n");
+    THROW(0x6985);
   }
   if (dataLength > tmpCtx.messageSigningContext.remainingLength) {
       THROW(0x6A80);
@@ -2127,7 +2188,7 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
         case 0x6000:
           // Wipe the transaction context and report the exception
           sw = e;
-          os_memset(&txContext, 0, sizeof(txContext));
+          reset_app_context();
           break;
         case 0x9000:
           // All is well
@@ -2136,6 +2197,7 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
         default:
           // Internal error
           sw = 0x6800 | (e & 0x7FF);
+          reset_app_context();
           break;
         }
         // Unexpected exception => report
@@ -2187,7 +2249,7 @@ void sample_main(void) {
                 case 0x6000:
                     // Wipe the transaction context and report the exception
                     sw = e;
-                    os_memset(&txContext, 0, sizeof(txContext));
+                    reset_app_context();
                     break;
                 case 0x9000:
                     // All is well
@@ -2196,6 +2258,7 @@ void sample_main(void) {
                 default:
                     // Internal error
                     sw = 0x6800 | (e & 0x7FF);
+                    reset_app_context();
                     break;
                 }
                 if (e != 0x9000) {
@@ -2338,7 +2401,7 @@ __attribute__((section(".boot"))) int main(int arg0) {
         chainConfig = (chain_config_t *)PIC(&C_chain_config);
     }
 
-    os_memset(&txContext, 0, sizeof(txContext));
+    reset_app_context();
 
     // ensure exception will work as planned
     os_boot();
