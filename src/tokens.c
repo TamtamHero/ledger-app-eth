@@ -15,6 +15,8 @@
 *  limitations under the License.
 ********************************************************************************/
 
+#ifdef HAVE_TOKENS_LIST
+
 #include "tokens.h"
 
 const tokenDefinition_t const TOKENS_AKROMA[NUM_TOKENS_AKROMA] = {};
@@ -1179,3 +1181,5 @@ const tokenDefinition_t const TOKENS_HPB[NUM_TOKENS_HPB] = {};
 const tokenDefinition_t const TOKENS_TOMOCHAIN[NUM_TOKENS_TOMOCHAIN] = {};
 
 const tokenDefinition_t const TOKENS_THUNDERCORE[NUM_TOKENS_THUNDERCORE] = {};
+
+#endif
