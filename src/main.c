@@ -1106,7 +1106,7 @@ UX_FLOW_DEF_VALID(
     pb,
     os_sched_exit(-1),
     {
-      &C_icon_dashboard,
+      &C_icon_dashboard_x,
       "Quit",
     });
 const ux_flow_step_t *        const ux_idle_flow [] = {
@@ -1144,7 +1144,7 @@ UX_FLOW_DEF_VALID(
     pb,
     ui_idle(),
     {
-      &C_icon_back,
+      &C_icon_back_x,
       "Back",
     });
 
@@ -1511,7 +1511,7 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     signatureLength =
         cx_ecdsa_sign(&privateKey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
                       tmpCtx.transactionContext.hash,
-                      sizeof(tmpCtx.transactionContext.hash), signature, &info);
+                      sizeof(tmpCtx.transactionContext.hash), signature, sizeof(signature), &info);
     os_memset(&privateKey, 0, sizeof(privateKey));
     // Parity is present in the sequence tag in the legacy API
     if (tmpContent.txContent.vLength == 0) {
@@ -1575,7 +1575,7 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
     signatureLength =
         cx_ecdsa_sign(&privateKey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
                       tmpCtx.messageSigningContext.hash,
-                      sizeof(tmpCtx.messageSigningContext.hash), signature, &info);
+                      sizeof(tmpCtx.messageSigningContext.hash), signature, sizeof(signature), &info);
     os_memset(&privateKey, 0, sizeof(privateKey));
     G_io_apdu_buffer[0] = 27;
     if (info & CX_ECCINFO_PARITY_ODD) {
@@ -2179,7 +2179,7 @@ void finalizeParsing(bool direct) {
     }
   }
   // Store the hash
-  cx_hash((cx_hash_t *)&sha3, CX_LAST, tmpCtx.transactionContext.hash, 0, tmpCtx.transactionContext.hash);
+  cx_hash((cx_hash_t *)&sha3, CX_LAST, tmpCtx.transactionContext.hash, 0, tmpCtx.transactionContext.hash, 32);
     // If there is a token to process, check if it is well known
     if (tokenProvisioned) {
         tokenDefinition_t *currentToken = getKnownToken();
@@ -2308,7 +2308,7 @@ void handleProvideErc20TokenInformation(uint8_t p1, uint8_t p2, uint8_t *workBuf
   if (dataLength < tickerLength + 20 + 4 + 4) {
     THROW(0x6A80);
   }
-  cx_hash_sha256(workBuffer + offset, tickerLength + 20 + 4 + 4, hash);
+  cx_hash_sha256(workBuffer + offset, tickerLength + 20 + 4 + 4, hash, 32);
   os_memmove(tmpCtx.transactionContext.currentToken.ticker, workBuffer + offset, tickerLength);
   tmpCtx.transactionContext.currentToken.ticker[tickerLength] = ' ';
   tmpCtx.transactionContext.currentToken.ticker[tickerLength + 1] = '\0';  
@@ -2467,7 +2467,7 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
     dataLength -= 4;
     // Initialize message header + length
     cx_keccak_init(&sha3, 256);
-    cx_hash((cx_hash_t *)&sha3, 0, (uint8_t*)SIGN_MAGIC, sizeof(SIGN_MAGIC) - 1, NULL);
+    cx_hash((cx_hash_t *)&sha3, 0, (uint8_t*)SIGN_MAGIC, sizeof(SIGN_MAGIC) - 1, NULL, 0);
     for (index = 1; (((index * base) <= tmpCtx.messageSigningContext.remainingLength) &&
                          (((index * base) / base) == index));
              index *= base);
@@ -2475,7 +2475,7 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
       tmp[pos++] = '0' + ((tmpCtx.messageSigningContext.remainingLength / index) % base);
     }
     tmp[pos] = '\0';
-    cx_hash((cx_hash_t *)&sha3, 0, (uint8_t*)tmp, pos, NULL);
+    cx_hash((cx_hash_t *)&sha3, 0, (uint8_t*)tmp, pos, NULL, 0);
     cx_sha256_init(&tmpContent.sha2);
   }
   else if (p1 != P1_MORE) {
@@ -2491,12 +2491,12 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
   if (dataLength > tmpCtx.messageSigningContext.remainingLength) {
       THROW(0x6A80);
   }
-  cx_hash((cx_hash_t *)&sha3, 0, workBuffer, dataLength, NULL);
-  cx_hash((cx_hash_t *)&tmpContent.sha2, 0, workBuffer, dataLength, NULL);
+  cx_hash((cx_hash_t *)&sha3, 0, workBuffer, dataLength, NULL, 0);
+  cx_hash((cx_hash_t *)&tmpContent.sha2, 0, workBuffer, dataLength, NULL, 0);
   tmpCtx.messageSigningContext.remainingLength -= dataLength;
   if (tmpCtx.messageSigningContext.remainingLength == 0) {
-    cx_hash((cx_hash_t *)&sha3, CX_LAST, workBuffer, 0, tmpCtx.messageSigningContext.hash);
-    cx_hash((cx_hash_t *)&tmpContent.sha2, CX_LAST, workBuffer, 0, hashMessage);
+    cx_hash((cx_hash_t *)&sha3, CX_LAST, workBuffer, 0, tmpCtx.messageSigningContext.hash, 32);
+    cx_hash((cx_hash_t *)&tmpContent.sha2, CX_LAST, workBuffer, 0, hashMessage, 32);
 
 #define HASH_LENGTH 4
     array_hexstr(strings.common.fullAddress, hashMessage, HASH_LENGTH / 2);
