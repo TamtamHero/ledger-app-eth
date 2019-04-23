@@ -1627,13 +1627,13 @@ unsigned int io_seproxyhal_touch_data_ok(const bagl_element_t *e) {
         break;
     case USTREAM_FAULT:
         reset_app_context();
-        io_seproxyhal_send_status(0x6A80);        
+        io_seproxyhal_send_status(0x6A80);
         ui_idle();
         break;
     default:
         PRINTF("Unexpected parser status\n");
         reset_app_context();
-        io_seproxyhal_send_status(0x6A80);        
+        io_seproxyhal_send_status(0x6A80);
         ui_idle();
     }
 
@@ -1872,6 +1872,12 @@ tokenDefinition_t* getKnownToken() {
         case CHAIN_KIND_TOMOCHAIN:
             numTokens = NUM_TOKENS_TOMOCHAIN;
             break;
+        case CHAIN_KIND_TOBALABA:
+            numTokens = NUM_TOKENS_TOBALABA;
+            break;
+        case CHAIN_KIND_DEXON:
+            numTokens = NUM_TOKENS_DEXON;
+            break;
     }
     for (i=0; i<numTokens; i++) {
         switch(chainConfig->kind) {
@@ -1940,6 +1946,12 @@ tokenDefinition_t* getKnownToken() {
                 break;
             case CHAIN_KIND_TOMOCHAIN:
                 currentToken = (tokenDefinition_t *)PIC(&TOKENS_TOMOCHAIN[i]);
+                break;
+            case CHAIN_KIND_TOBALABA:
+                currentToken = (tokenDefinition_t *)PIC(&TOKENS_TOBALABA[i]);
+                break;
+            case CHAIN_KIND_DEXON:
+                currentToken = (tokenDefinition_t *)PIC(&TOKENS_DEXON[i]);
                 break;
         }
         if (os_memcmp(currentToken->address, tmpContent.txContent.destination, 20) == 0) {
@@ -2091,7 +2103,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t da
   uint32_t bip32Path[MAX_BIP32_PATH];
   uint32_t i;
   uint8_t bip32PathLength = *(dataBuffer++);
-  cx_ecfp_private_key_t privateKey;    
+  cx_ecfp_private_key_t privateKey;
   reset_app_context();
   if ((bip32PathLength < 0x01) ||
       (bip32PathLength > MAX_BIP32_PATH)) {
@@ -2171,7 +2183,7 @@ void finalizeParsing(bool direct) {
         if (direct) {
             THROW(0x6A80);
         }
-        else {            
+        else {
             io_seproxyhal_send_status(0x6A80);
             ui_idle();
             return;
@@ -2193,7 +2205,7 @@ void finalizeParsing(bool direct) {
             tmpContent.txContent.value.length = 32;
         }
     }
-    else {      
+    else {
       if (dataPresent && !N_storage.dataAllowed) {
           reset_app_context();
           PRINTF("Data field forbidden\n");
