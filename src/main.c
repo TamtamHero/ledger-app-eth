@@ -2641,6 +2641,8 @@ void sample_main(void) {
                     THROW(0x6982);
                 }
 
+                PRINTF("New APDU received:\n%.*H\n", rx, G_io_apdu_buffer);
+
                 handleApdu(&flags, &tx);
             }
             CATCH(EXCEPTION_IO_RESET) {
