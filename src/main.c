@@ -1080,9 +1080,9 @@ void switch_settings_display_data(void);
 //////////////////////////////////////////////////////////////////////
 UX_FLOW_DEF_NOCB(
     ux_idle_flow_1_step,
-    bnn, //pnn,
+    nn, //pnn,
     {
-      "", //&C_icon_dashboard,
+      //"", //&C_icon_dashboard,
       "Application",
       "is ready",
     });
