@@ -1499,7 +1499,6 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     uint8_t signatureLength;
     cx_ecfp_private_key_t privateKey;
     uint32_t tx = 0;
-    uint8_t rLength, sLength, rOffset, sOffset;
     uint32_t v = getV(&tmpContent.txContent);
     os_perso_derive_node_bip32(CX_CURVE_256K1, tmpCtx.transactionContext.bip32Path,
                                tmpCtx.transactionContext.pathLength,
@@ -1529,13 +1528,25 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     if (info & CX_ECCINFO_xGTn) {
       G_io_apdu_buffer[0] += 2;
     }
-    rLength = signature[3];
-    sLength = signature[4 + rLength + 1];
-    rOffset = (rLength == 33 ? 1 : 0);
-    sOffset = (sLength == 33 ? 1 : 0);
-    os_memmove(G_io_apdu_buffer + 1, signature + 4 + rOffset, 32);
-    os_memmove(G_io_apdu_buffer + 1 + 32, signature + 4 + rLength + 2 + sOffset,
-               32);
+    os_memset(G_io_apdu_buffer + 1, 0x00, 64);
+    uint8_t offset = 1;
+    uint8_t xoffset = 4; //point to r value
+    //copy r
+    uint8_t xlength = signature[xoffset-1];
+    if (xlength == 33) {
+      xlength = 32;
+      xoffset ++;
+    }
+    memmove(G_io_apdu_buffer+offset+32-xlength,  signature+xoffset, xlength);
+    offset += 32;
+    xoffset += xlength +2; //move over rvalue and TagLEn
+    //copy s value
+    xlength = signature[xoffset-1];
+    if (xlength == 33) {
+      xlength = 32;
+      xoffset ++;
+    }
+    memmove(G_io_apdu_buffer+offset+32-xlength, signature+xoffset, xlength);
     tx = 65;
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
@@ -1565,7 +1576,6 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
     uint8_t signatureLength;
     cx_ecfp_private_key_t privateKey;
     uint32_t tx = 0;
-    uint8_t rLength, sLength, rOffset, sOffset;
     os_perso_derive_node_bip32(
         CX_CURVE_256K1, tmpCtx.messageSigningContext.bip32Path,
         tmpCtx.messageSigningContext.pathLength, privateKeyData, NULL);
@@ -1584,13 +1594,25 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
     if (info & CX_ECCINFO_xGTn) {
       G_io_apdu_buffer[0] += 2;
     }
-    rLength = signature[3];
-    sLength = signature[4 + rLength + 1];
-    rOffset = (rLength == 33 ? 1 : 0);
-    sOffset = (sLength == 33 ? 1 : 0);
-    os_memmove(G_io_apdu_buffer + 1, signature + 4 + rOffset, 32);
-    os_memmove(G_io_apdu_buffer + 1 + 32, signature + 4 + rLength + 2 + sOffset,
-               32);
+    os_memset(G_io_apdu_buffer + 1, 0x00, 64);
+    uint8_t offset = 1;
+    uint8_t xoffset = 4; //point to r value
+    //copy r
+    uint8_t xlength = signature[xoffset-1];
+    if (xlength == 33) {
+      xlength = 32;
+      xoffset ++;
+    }
+    memmove(G_io_apdu_buffer+offset+32-xlength,  signature+xoffset, xlength);
+    offset += 32;
+    xoffset += xlength +2; //move over rvalue and TagLEn
+    //copy s value
+    xlength = signature[xoffset-1];
+    if (xlength == 33) {
+      xlength = 32;
+      xoffset ++;
+    }
+    memmove(G_io_apdu_buffer+offset+32-xlength, signature+xoffset, xlength);
     tx = 65;
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
