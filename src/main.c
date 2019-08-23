@@ -1930,7 +1930,7 @@ tokenDefinition_t* getKnownToken() {
             case CHAIN_KIND_THUNDERCORE:
                 currentToken = (tokenDefinition_t *)PIC(&TOKENS_THUNDERCORE[i]);
                 break;
-        } 
+        }
         if (os_memcmp(currentToken->address, tmpContent.txContent.destination, 20) == 0) {
             return currentToken;
         }

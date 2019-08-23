@@ -78,6 +78,6 @@ extern tokenDefinition_t const TOKENS_TOMOCHAIN[NUM_TOKENS_TOMOCHAIN];
 extern tokenDefinition_t const TOKENS_TOBALABA[NUM_TOKENS_TOBALABA];
 extern tokenDefinition_t const TOKENS_THUNDERCORE[NUM_TOKENS_THUNDERCORE];
 
-#endif
+#endif /* HAVE_TOKENS_LIST */
 
 #endif /* _TOKENS_H_ */
