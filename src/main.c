@@ -1500,6 +1500,7 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     cx_ecfp_private_key_t privateKey;
     uint32_t tx = 0;
     uint32_t v = getV(&tmpContent.txContent);
+    io_seproxyhal_io_heartbeat();
     os_perso_derive_node_bip32(CX_CURVE_256K1, tmpCtx.transactionContext.bip32Path,
                                tmpCtx.transactionContext.pathLength,
                                privateKeyData, NULL);
@@ -1507,6 +1508,7 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
                                  &privateKey);
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
     unsigned int info = 0;
+    io_seproxyhal_io_heartbeat();
     signatureLength =
         cx_ecdsa_sign(&privateKey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
                       tmpCtx.transactionContext.hash,
