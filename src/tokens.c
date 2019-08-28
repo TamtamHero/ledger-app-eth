@@ -1,4 +1,4 @@
-/*******************************************************************************
+git pull /*******************************************************************************
 *   Ledger Ethereum App
 *   (c) 2016-2019 Ledger
 *
@@ -1181,6 +1181,8 @@ const tokenDefinition_t const TOKENS_HPB[NUM_TOKENS_HPB] = {};
 const tokenDefinition_t const TOKENS_TOMOCHAIN[NUM_TOKENS_TOMOCHAIN] = {};
 
 const tokenDefinition_t const TOKENS_TOBALABA[NUM_TOKENS_TOBALABA] = {};
+
+const tokenDefinition_t const TOKENS_DEXON[NUM_TOKENS_DEXON] = {};
 
 const tokenDefinition_t const TOKENS_THUNDERCORE[NUM_TOKENS_THUNDERCORE] = {
 	{{0x8c,0x84,0x4a,0x7e,0xb9,0x2c,0x45,0xe3,0xb5,0x42,0xb8,0xce,0x3f,0xe5,0xf8,0x2d,0x37,0x64,0x0d,0x7f}, "TT-USDT ", 6},
