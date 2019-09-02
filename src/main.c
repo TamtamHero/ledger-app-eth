@@ -1905,6 +1905,7 @@ tokenDefinition_t* getKnownToken() {
             break;
         case CHAIN_KIND_EWC:
             numTokens = NUM_TOKENS_EWC;
+            break;
     }
     for (i=0; i<numTokens; i++) {
         switch(chainConfig->kind) {
