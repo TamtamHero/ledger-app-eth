@@ -1493,6 +1493,28 @@ void io_seproxyhal_send_status(uint32_t sw) {
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
 }
 
+void format_signature_out(const uint8_t* signature) {
+  os_memset(G_io_apdu_buffer + 1, 0x00, 64);
+  uint8_t offset = 1;
+  uint8_t xoffset = 4; //point to r value
+  //copy r
+  uint8_t xlength = signature[xoffset-1];
+  if (xlength == 33) {
+    xlength = 32;
+    xoffset ++;
+  }
+  memmove(G_io_apdu_buffer+offset+32-xlength,  signature+xoffset, xlength);
+  offset += 32;
+  xoffset += xlength +2; //move over rvalue and TagLEn
+  //copy s value
+  xlength = signature[xoffset-1];
+  if (xlength == 33) {
+    xlength = 32;
+    xoffset ++;
+  }
+  memmove(G_io_apdu_buffer+offset+32-xlength, signature+xoffset, xlength);
+}
+
 unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     uint8_t privateKeyData[32];
     uint8_t signature[100];
@@ -1500,6 +1522,7 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     cx_ecfp_private_key_t privateKey;
     uint32_t tx = 0;
     uint32_t v = getV(&tmpContent.txContent);
+    io_seproxyhal_io_heartbeat();
     os_perso_derive_node_bip32(CX_CURVE_256K1, tmpCtx.transactionContext.bip32Path,
                                tmpCtx.transactionContext.pathLength,
                                privateKeyData, NULL);
@@ -1507,6 +1530,7 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
                                  &privateKey);
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
     unsigned int info = 0;
+    io_seproxyhal_io_heartbeat();
     signatureLength =
         cx_ecdsa_sign(&privateKey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
                       tmpCtx.transactionContext.hash,
@@ -1528,25 +1552,7 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     if (info & CX_ECCINFO_xGTn) {
       G_io_apdu_buffer[0] += 2;
     }
-    os_memset(G_io_apdu_buffer + 1, 0x00, 64);
-    uint8_t offset = 1;
-    uint8_t xoffset = 4; //point to r value
-    //copy r
-    uint8_t xlength = signature[xoffset-1];
-    if (xlength == 33) {
-      xlength = 32;
-      xoffset ++;
-    }
-    memmove(G_io_apdu_buffer+offset+32-xlength,  signature+xoffset, xlength);
-    offset += 32;
-    xoffset += xlength +2; //move over rvalue and TagLEn
-    //copy s value
-    xlength = signature[xoffset-1];
-    if (xlength == 33) {
-      xlength = 32;
-      xoffset ++;
-    }
-    memmove(G_io_apdu_buffer+offset+32-xlength, signature+xoffset, xlength);
+    format_signature_out(signature);
     tx = 65;
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
@@ -1579,9 +1585,11 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
     os_perso_derive_node_bip32(
         CX_CURVE_256K1, tmpCtx.messageSigningContext.bip32Path,
         tmpCtx.messageSigningContext.pathLength, privateKeyData, NULL);
+    io_seproxyhal_io_heartbeat();
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
     unsigned int info = 0;
+    io_seproxyhal_io_heartbeat();
     signatureLength =
         cx_ecdsa_sign(&privateKey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
                       tmpCtx.messageSigningContext.hash,
@@ -1594,25 +1602,7 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
     if (info & CX_ECCINFO_xGTn) {
       G_io_apdu_buffer[0] += 2;
     }
-    os_memset(G_io_apdu_buffer + 1, 0x00, 64);
-    uint8_t offset = 1;
-    uint8_t xoffset = 4; //point to r value
-    //copy r
-    uint8_t xlength = signature[xoffset-1];
-    if (xlength == 33) {
-      xlength = 32;
-      xoffset ++;
-    }
-    memmove(G_io_apdu_buffer+offset+32-xlength,  signature+xoffset, xlength);
-    offset += 32;
-    xoffset += xlength +2; //move over rvalue and TagLEn
-    //copy s value
-    xlength = signature[xoffset-1];
-    if (xlength == 33) {
-      xlength = 32;
-      xoffset ++;
-    }
-    memmove(G_io_apdu_buffer+offset+32-xlength, signature+xoffset, xlength);
+    format_signature_out(signature);
     tx = 65;
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
