@@ -52,7 +52,7 @@ typedef struct tokenDefinition_t {
 #define NUM_TOKENS_TOMOCHAIN 0
 #define NUM_TOKENS_TOBALABA 0
 #define NUM_TOKENS_DEXON 0
-#define NUM_TOKENS_THUNDERCORE 2
+#define NUM_TOKENS_THUNDERCORE 0
 
 extern tokenDefinition_t const TOKENS_AKROMA[NUM_TOKENS_AKROMA];
 extern tokenDefinition_t const TOKENS_ELLAISM[NUM_TOKENS_ELLAISM];

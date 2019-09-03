@@ -1902,6 +1902,7 @@ tokenDefinition_t* getKnownToken() {
             break;
         case CHAIN_KIND_THUNDERCORE:
             numTokens = NUM_TOKENS_THUNDERCORE;
+            break;
     }
     for (i=0; i<numTokens; i++) {
         switch(chainConfig->kind) {
@@ -2350,7 +2351,7 @@ void handleProvideErc20TokenInformation(uint8_t p1, uint8_t p2, uint8_t *workBuf
   cx_hash_sha256(workBuffer + offset, tickerLength + 20 + 4 + 4, hash, 32);
   os_memmove(tmpCtx.transactionContext.currentToken.ticker, workBuffer + offset, tickerLength);
   tmpCtx.transactionContext.currentToken.ticker[tickerLength] = ' ';
-  tmpCtx.transactionContext.currentToken.ticker[tickerLength + 1] = '\0';  
+  tmpCtx.transactionContext.currentToken.ticker[tickerLength + 1] = '\0';
   offset += tickerLength;
   dataLength -= tickerLength;
   os_memmove(tmpCtx.transactionContext.currentToken.address, workBuffer + offset, 20);
