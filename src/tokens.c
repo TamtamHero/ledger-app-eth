@@ -1184,4 +1184,6 @@ const tokenDefinition_t const TOKENS_TOBALABA[NUM_TOKENS_TOBALABA] = {};
 
 const tokenDefinition_t const TOKENS_WEBCHAIN[NUM_TOKENS_WEBCHAIN] = {};
 
+const tokenDefinition_t const TOKENS_DEXON[NUM_TOKENS_DEXON] = {};
+
 #endif
