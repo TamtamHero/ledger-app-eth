@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 *******************************************************************************
 *   Ledger Ethereum App
@@ -22,20 +22,17 @@ from __future__ import print_function
 from ledgerblue.comm import getDongle
 from ledgerblue.commException import CommException
 from decimal import Decimal
+from ethBase import sha3
+from eth_keys import KeyAPI
 import argparse
 import struct
 import binascii
-from ethBase import Transaction, UnsignedTransaction, unsigned_tx_from_tx
-from rlp import encode
 
-# Define here Chain_ID for EIP-155
+# Define here Chain_ID
 CHAIN_ID = 0
 
-try:
-    from rlp.utils import decode_hex, encode_hex, str_to_bytes
-except:
-    #Python3 hack import for pyethereum
-    from ethereum.utils import decode_hex, encode_hex, str_to_bytes
+# Magic define
+SIGN_MAGIC = b'\x19Ethereum Signed Message:\n'
 
 def parse_bip32_path(path):
     if len(path) == 0:
@@ -52,41 +49,20 @@ def parse_bip32_path(path):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--nonce', help="Nonce associated to the account", type=int, required=True)
-parser.add_argument('--gasprice', help="Network gas price", type=int, required=True)
-parser.add_argument('--startgas', help="startgas", default='21000', type=int)
-parser.add_argument('--amount', help="Amount to send in ether", required=True)
-parser.add_argument('--to', help="Destination address", type=str, required=True)
 parser.add_argument('--path', help="BIP 32 path to sign with")
-parser.add_argument('--data', help="Data to add, hex encoded")
+parser.add_argument('--message', help="Message to sign", required=True)
 args = parser.parse_args()
 
+args.message = args.message.encode()
+
 if args.path == None:
-    args.path = "44'/60'/0'/0/0"
+    args.path = "44'/0'"
 
-if args.data == None:
-    args.data = b""
-else:
-    args.data = decode_hex(args.data[2:])
-
-amount = Decimal(args.amount) * 10**18
-
-tx = Transaction(
-    nonce=int(args.nonce),
-    gasprice=int(args.gasprice),
-    startgas=int(args.startgas),
-    to=decode_hex(args.to[2:]),
-    value=int(amount),
-    data=args.data,
-    v=CHAIN_ID,
-    r=0,
-    s=0
-)
-
-encodedTx = encode(tx, Transaction)
+encodedTx = struct.pack(">I", len(args.message))
+encodedTx += args.message
 
 donglePath = parse_bip32_path(args.path)
-apdu = bytearray.fromhex("e0040000")
+apdu = bytearray.fromhex("e0080000")
 apdu.append(len(donglePath) + 1 + len(encodedTx))
 apdu.append(len(donglePath) // 4)
 apdu += donglePath + encodedTx
@@ -94,17 +70,28 @@ apdu += donglePath + encodedTx
 dongle = getDongle(True)
 result = dongle.exchange(bytes(apdu))
 
-# Needs to recover (main.c:1121)
+v = int(result[0])
+
+# Compute parity
 if (CHAIN_ID*2 + 35) + 1 > 255:
-	ecc_parity = result[0] - ((CHAIN_ID*2 + 35) % 256)
-	v = (CHAIN_ID*2 + 35) + ecc_parity
+	ecc_parity = v - ((CHAIN_ID*2 + 35) % 256)
 else:
-	v = result[0]
+	ecc_parity = (v + 1) % 2
 
-r = int(binascii.hexlify(result[1:1 + 32]), 16)
-s = int(binascii.hexlify(result[1 + 32: 1 + 32 + 32]), 16)
+v = "%02X" % ecc_parity
+r = binascii.hexlify(result[1:1 + 32]).decode()
+s = binascii.hexlify(result[1 + 32: 1 + 32 + 32]).decode()
+msg_to_sign = SIGN_MAGIC + str(len(args.message)).encode() + args.message
+hash = sha3(msg_to_sign.decode())
 
-tx = Transaction(tx.nonce, tx.gasprice, tx.startgas,
-                 tx.to, tx.value, tx.data, v, r, s)
+signature = KeyAPI.Signature(vrs=(int(v, 16), int(r, 16), int(s, 16)))
+pubkey = KeyAPI.PublicKey.recover_from_msg_hash(hash, signature)
 
-print("Signed transaction", encode_hex(encode(tx)))
+print("[INFO] Hash is: 0x", binascii.hexlify(hash).decode(), sep='');
+print('{')
+print('  "address": "', pubkey.to_address(), '",', sep='')
+print('  "msg": "', args.message.decode(),'",', sep='')
+print('  "sig": "', signature, '",', sep = '')
+print('  "version": "3"')
+print('  "signed": "ledger"')
+print('}')
