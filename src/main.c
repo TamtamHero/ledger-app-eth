@@ -144,8 +144,16 @@ union {
     rawDataContext_t rawDataContext;
 } dataContext;
 
+typedef enum {
+  APP_STATE_IDLE,
+  APP_STATE_SIGNING_TX,
+  APP_STATE_SIGNING_MESSAGE
+} app_state_t;
+
+
 volatile uint8_t dataAllowed;
 volatile uint8_t contractDetails;
+volatile uint8_t appState;
 volatile char addressSummary[32];
 volatile bool dataPresent;
 volatile bool tokenProvisioned;
@@ -202,6 +210,13 @@ const bagl_element_t* ui_menu_item_out_over(const bagl_element_t* e) {
   // the selection rectangle is after the none|touchable
   e = (const bagl_element_t*)(((unsigned int)e)+sizeof(bagl_element_t));
   return e;
+}
+
+void reset_app_context() {
+  appState = APP_STATE_IDLE;
+  currentTokenSet = false;
+  os_memset((uint8_t*)&txContext, 0, sizeof(txContext));
+  os_memset((uint8_t*)&tmpContent, 0, sizeof(tmpContent));
 }
 
 
@@ -1065,9 +1080,9 @@ void switch_settings_display_data(void);
 //////////////////////////////////////////////////////////////////////
 UX_FLOW_DEF_NOCB(
     ux_idle_flow_1_step,
-    bnn, //pnn,
+    nn, //pnn,
     {
-      "", //&C_icon_dashboard,
+      //"", //&C_icon_dashboard,
       "Application",
       "is ready",
     });
@@ -1091,7 +1106,7 @@ UX_FLOW_DEF_VALID(
     pb,
     os_sched_exit(-1),
     {
-      &C_icon_dashboard,
+      &C_icon_dashboard_x,
       "Quit",
     });
 const ux_flow_step_t *        const ux_idle_flow [] = {
@@ -1129,7 +1144,7 @@ UX_FLOW_DEF_VALID(
     pb,
     ui_idle(),
     {
-      &C_icon_back,
+      &C_icon_back_x,
       "Back",
     });
 
@@ -1437,6 +1452,7 @@ unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e) {
     uint32_t tx = set_result_get_publicKey();
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
+    reset_app_context();
     // Send back the response, do not restart the event loop
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
     // Display back the original UX
@@ -1447,6 +1463,7 @@ unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e) {
 unsigned int io_seproxyhal_touch_address_cancel(const bagl_element_t *e) {
     G_io_apdu_buffer[0] = 0x69;
     G_io_apdu_buffer[1] = 0x85;
+    reset_app_context();
     // Send back the response, do not restart the event loop
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
     // Display back the original UX
@@ -1476,14 +1493,36 @@ void io_seproxyhal_send_status(uint32_t sw) {
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
 }
 
+void format_signature_out(const uint8_t* signature) {
+  os_memset(G_io_apdu_buffer + 1, 0x00, 64);
+  uint8_t offset = 1;
+  uint8_t xoffset = 4; //point to r value
+  //copy r
+  uint8_t xlength = signature[xoffset-1];
+  if (xlength == 33) {
+    xlength = 32;
+    xoffset ++;
+  }
+  memmove(G_io_apdu_buffer+offset+32-xlength,  signature+xoffset, xlength);
+  offset += 32;
+  xoffset += xlength +2; //move over rvalue and TagLEn
+  //copy s value
+  xlength = signature[xoffset-1];
+  if (xlength == 33) {
+    xlength = 32;
+    xoffset ++;
+  }
+  memmove(G_io_apdu_buffer+offset+32-xlength, signature+xoffset, xlength);
+}
+
 unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     uint8_t privateKeyData[32];
     uint8_t signature[100];
     uint8_t signatureLength;
     cx_ecfp_private_key_t privateKey;
     uint32_t tx = 0;
-    uint8_t rLength, sLength, rOffset, sOffset;
     uint32_t v = getV(&tmpContent.txContent);
+    io_seproxyhal_io_heartbeat();
     os_perso_derive_node_bip32(CX_CURVE_256K1, tmpCtx.transactionContext.bip32Path,
                                tmpCtx.transactionContext.pathLength,
                                privateKeyData, NULL);
@@ -1491,10 +1530,11 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
                                  &privateKey);
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
     unsigned int info = 0;
+    io_seproxyhal_io_heartbeat();
     signatureLength =
         cx_ecdsa_sign(&privateKey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
                       tmpCtx.transactionContext.hash,
-                      sizeof(tmpCtx.transactionContext.hash), signature, &info);
+                      sizeof(tmpCtx.transactionContext.hash), signature, sizeof(signature), &info);
     os_memset(&privateKey, 0, sizeof(privateKey));
     // Parity is present in the sequence tag in the legacy API
     if (tmpContent.txContent.vLength == 0) {
@@ -1512,17 +1552,11 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     if (info & CX_ECCINFO_xGTn) {
       G_io_apdu_buffer[0] += 2;
     }
-    rLength = signature[3];
-    sLength = signature[4 + rLength + 1];
-    rOffset = (rLength == 33 ? 1 : 0);
-    sOffset = (sLength == 33 ? 1 : 0);
-    os_memmove(G_io_apdu_buffer + 1, signature + 4 + rOffset, 32);
-    os_memmove(G_io_apdu_buffer + 1 + 32, signature + 4 + rLength + 2 + sOffset,
-               32);
+    format_signature_out(signature);
     tx = 65;
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
-
+    reset_app_context();
     // Send back the response, do not restart the event loop
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
     // Display back the original UX
@@ -1531,6 +1565,7 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
 }
 
 unsigned int io_seproxyhal_touch_tx_cancel(const bagl_element_t *e) {
+    reset_app_context();
     G_io_apdu_buffer[0] = 0x69;
     G_io_apdu_buffer[1] = 0x85;
     // Send back the response, do not restart the event loop
@@ -1547,17 +1582,18 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
     uint8_t signatureLength;
     cx_ecfp_private_key_t privateKey;
     uint32_t tx = 0;
-    uint8_t rLength, sLength, rOffset, sOffset;
     os_perso_derive_node_bip32(
         CX_CURVE_256K1, tmpCtx.messageSigningContext.bip32Path,
         tmpCtx.messageSigningContext.pathLength, privateKeyData, NULL);
+    io_seproxyhal_io_heartbeat();
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
     unsigned int info = 0;
+    io_seproxyhal_io_heartbeat();
     signatureLength =
         cx_ecdsa_sign(&privateKey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
                       tmpCtx.messageSigningContext.hash,
-                      sizeof(tmpCtx.messageSigningContext.hash), signature, &info);
+                      sizeof(tmpCtx.messageSigningContext.hash), signature, sizeof(signature), &info);
     os_memset(&privateKey, 0, sizeof(privateKey));
     G_io_apdu_buffer[0] = 27;
     if (info & CX_ECCINFO_PARITY_ODD) {
@@ -1566,16 +1602,11 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
     if (info & CX_ECCINFO_xGTn) {
       G_io_apdu_buffer[0] += 2;
     }
-    rLength = signature[3];
-    sLength = signature[4 + rLength + 1];
-    rOffset = (rLength == 33 ? 1 : 0);
-    sOffset = (sLength == 33 ? 1 : 0);
-    os_memmove(G_io_apdu_buffer + 1, signature + 4 + rOffset, 32);
-    os_memmove(G_io_apdu_buffer + 1 + 32, signature + 4 + rLength + 2 + sOffset,
-               32);
+    format_signature_out(signature);
     tx = 65;
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
+    reset_app_context();
     // Send back the response, do not restart the event loop
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
     // Display back the original UX
@@ -1584,6 +1615,7 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
 }
 
 unsigned int io_seproxyhal_touch_signMessage_cancel(const bagl_element_t *e) {
+    reset_app_context();
     G_io_apdu_buffer[0] = 0x69;
     G_io_apdu_buffer[1] = 0x85;
     // Send back the response, do not restart the event loop
@@ -1606,11 +1638,13 @@ unsigned int io_seproxyhal_touch_data_ok(const bagl_element_t *e) {
         ui_idle();
         break;
     case USTREAM_FAULT:
+        reset_app_context();
         io_seproxyhal_send_status(0x6A80);
         ui_idle();
         break;
     default:
         PRINTF("Unexpected parser status\n");
+        reset_app_context();
         io_seproxyhal_send_status(0x6A80);
         ui_idle();
     }
@@ -1624,6 +1658,7 @@ unsigned int io_seproxyhal_touch_data_ok(const bagl_element_t *e) {
 
 
 unsigned int io_seproxyhal_touch_data_cancel(const bagl_element_t *e) {
+    reset_app_context();
     io_seproxyhal_send_status(0x6985);
     // Display back the original UX
     ui_idle();
@@ -1858,6 +1893,9 @@ tokenDefinition_t* getKnownToken() {
         case CHAIN_KIND_TOBALABA:
             numTokens = NUM_TOKENS_TOBALABA;
             break;
+        case CHAIN_KIND_DEXON:
+            numTokens = NUM_TOKENS_DEXON;
+            break;
     }
     for (i=0; i<numTokens; i++) {
         switch(chainConfig->kind) {
@@ -1935,6 +1973,9 @@ tokenDefinition_t* getKnownToken() {
                 break;
             case CHAIN_KIND_TOBALABA:
                 currentToken = (tokenDefinition_t *)PIC(&TOKENS_TOBALABA[i]);
+                break;
+            case CHAIN_KIND_DEXON:
+                currentToken = (tokenDefinition_t *)PIC(&TOKENS_DEXON[i]);
                 break;
         }
         if (os_memcmp(currentToken->address, tmpContent.txContent.destination, 20) == 0) {
@@ -2087,7 +2128,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t da
   uint32_t i;
   uint8_t bip32PathLength = *(dataBuffer++);
   cx_ecfp_private_key_t privateKey;
-
+  reset_app_context();
   if ((bip32PathLength < 0x01) ||
       (bip32PathLength > MAX_BIP32_PATH)) {
     PRINTF("Invalid path\n");
@@ -2161,6 +2202,7 @@ void finalizeParsing(bool direct) {
   if (chainConfig->chainId != 0) {
     uint32_t v = getV(&tmpContent.txContent);
     if (chainConfig->chainId != v) {
+        reset_app_context();
         PRINTF("Invalid chainId %d expected %d\n", v, chainConfig->chainId);
         if (direct) {
             THROW(0x6A80);
@@ -2173,7 +2215,7 @@ void finalizeParsing(bool direct) {
     }
   }
   // Store the hash
-  cx_hash((cx_hash_t *)&sha3, CX_LAST, tmpCtx.transactionContext.hash, 0, tmpCtx.transactionContext.hash);
+  cx_hash((cx_hash_t *)&sha3, CX_LAST, tmpCtx.transactionContext.hash, 0, tmpCtx.transactionContext.hash, 32);
     // If there is a token to process, check if it is well known
     if (tokenProvisioned) {
         tokenDefinition_t *currentToken = getKnownToken();
@@ -2189,6 +2231,7 @@ void finalizeParsing(bool direct) {
     }
     else {
       if (dataPresent && !N_storage.dataAllowed) {
+          reset_app_context();
           PRINTF("Data field forbidden\n");
           if (direct) {
             THROW(0x6A80);
@@ -2301,7 +2344,7 @@ void handleProvideErc20TokenInformation(uint8_t p1, uint8_t p2, uint8_t *workBuf
   if (dataLength < tickerLength + 20 + 4 + 4) {
     THROW(0x6A80);
   }
-  cx_hash_sha256(workBuffer + offset, tickerLength + 20 + 4 + 4, hash);
+  cx_hash_sha256(workBuffer + offset, tickerLength + 20 + 4 + 4, hash, 32);
   os_memmove(tmpCtx.transactionContext.currentToken.ticker, workBuffer + offset, tickerLength);
   tmpCtx.transactionContext.currentToken.ticker[tickerLength] = ' ';
   tmpCtx.transactionContext.currentToken.ticker[tickerLength + 1] = '\0';  
@@ -2334,6 +2377,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint16_t dataLength
   parserStatus_e txResult;
   uint32_t i;
   if (p1 == P1_FIRST) {
+    if (dataLength < 1) {
+      PRINTF("Invalid data\n");
+      THROW(0x6a80);
+    }    
+    if (appState != APP_STATE_IDLE) {
+      reset_app_context();
+    }
+    appState = APP_STATE_SIGNING_TX;    
     tmpCtx.transactionContext.pathLength = workBuffer[0];
     if ((tmpCtx.transactionContext.pathLength < 0x01) ||
         (tmpCtx.transactionContext.pathLength > MAX_BIP32_PATH)) {
@@ -2343,6 +2394,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint16_t dataLength
     workBuffer++;
     dataLength--;
     for (i = 0; i < tmpCtx.transactionContext.pathLength; i++) {
+      if (dataLength < 4) {
+        PRINTF("Invalid data\n");
+        THROW(0x6a80);
+      }      
       tmpCtx.transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
       workBuffer += 4;
       dataLength -= 4;
@@ -2357,6 +2412,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint16_t dataLength
   }
   if (p2 != 0) {
     THROW(0x6B00);
+  }
+  if ((p1 == P1_MORE) && (appState != APP_STATE_SIGNING_TX)) {
+    PRINTF("Signature not initialized\n");
+    THROW(0x6985);
   }
   if (txContext.currentField == TX_RLP_NONE) {
     PRINTF("Parser not initialized\n");
@@ -2410,6 +2469,14 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
     uint32_t base = 10;
     uint8_t pos = 0;
     uint32_t i;
+    if (dataLength < 1) {
+      PRINTF("Invalid data\n");
+      THROW(0x6a80);
+    }
+    if (appState != APP_STATE_IDLE) {
+      reset_app_context();
+    }
+    appState = APP_STATE_SIGNING_MESSAGE;    
     tmpCtx.messageSigningContext.pathLength = workBuffer[0];
     if ((tmpCtx.messageSigningContext.pathLength < 0x01) ||
         (tmpCtx.messageSigningContext.pathLength > MAX_BIP32_PATH)) {
@@ -2419,16 +2486,24 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
     workBuffer++;
     dataLength--;
     for (i = 0; i < tmpCtx.messageSigningContext.pathLength; i++) {
+        if (dataLength < 4) {
+          PRINTF("Invalid data\n");
+          THROW(0x6a80);
+        }
         tmpCtx.messageSigningContext.bip32Path[i] = U4BE(workBuffer, 0);
         workBuffer += 4;
         dataLength -= 4;
     }
+    if (dataLength < 4) {
+      PRINTF("Invalid data\n");
+      THROW(0x6a80);
+    }    
     tmpCtx.messageSigningContext.remainingLength = U4BE(workBuffer, 0);
     workBuffer += 4;
     dataLength -= 4;
     // Initialize message header + length
     cx_keccak_init(&sha3, 256);
-    cx_hash((cx_hash_t *)&sha3, 0, SIGN_MAGIC, sizeof(SIGN_MAGIC) - 1, NULL);
+    cx_hash((cx_hash_t *)&sha3, 0, (uint8_t*)SIGN_MAGIC, sizeof(SIGN_MAGIC) - 1, NULL, 0);
     for (index = 1; (((index * base) <= tmpCtx.messageSigningContext.remainingLength) &&
                          (((index * base) / base) == index));
              index *= base);
@@ -2436,7 +2511,7 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
       tmp[pos++] = '0' + ((tmpCtx.messageSigningContext.remainingLength / index) % base);
     }
     tmp[pos] = '\0';
-    cx_hash((cx_hash_t *)&sha3, 0, tmp, pos, NULL);
+    cx_hash((cx_hash_t *)&sha3, 0, (uint8_t*)tmp, pos, NULL, 0);
     cx_sha256_init(&tmpContent.sha2);
   }
   else if (p1 != P1_MORE) {
@@ -2445,15 +2520,19 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
   if (p2 != 0) {
     THROW(0x6B00);
   }
+  if ((p1 == P1_MORE) && (appState != APP_STATE_SIGNING_MESSAGE)) {
+    PRINTF("Signature not initialized\n");
+    THROW(0x6985);
+  }
   if (dataLength > tmpCtx.messageSigningContext.remainingLength) {
       THROW(0x6A80);
   }
-  cx_hash((cx_hash_t *)&sha3, 0, workBuffer, dataLength, NULL);
-  cx_hash((cx_hash_t *)&tmpContent.sha2, 0, workBuffer, dataLength, NULL);
+  cx_hash((cx_hash_t *)&sha3, 0, workBuffer, dataLength, NULL, 0);
+  cx_hash((cx_hash_t *)&tmpContent.sha2, 0, workBuffer, dataLength, NULL, 0);
   tmpCtx.messageSigningContext.remainingLength -= dataLength;
   if (tmpCtx.messageSigningContext.remainingLength == 0) {
-    cx_hash((cx_hash_t *)&sha3, CX_LAST, workBuffer, 0, tmpCtx.messageSigningContext.hash);
-    cx_hash((cx_hash_t *)&tmpContent.sha2, CX_LAST, workBuffer, 0, hashMessage);
+    cx_hash((cx_hash_t *)&sha3, CX_LAST, workBuffer, 0, tmpCtx.messageSigningContext.hash, 32);
+    cx_hash((cx_hash_t *)&tmpContent.sha2, CX_LAST, workBuffer, 0, hashMessage, 32);
 
 #define HASH_LENGTH 4
     array_hexstr(strings.common.fullAddress, hashMessage, HASH_LENGTH / 2);
@@ -2535,7 +2614,7 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
         case 0x6000:
           // Wipe the transaction context and report the exception
           sw = e;
-          os_memset(&txContext, 0, sizeof(txContext));
+          reset_app_context();
           break;
         case 0x9000:
           // All is well
@@ -2544,6 +2623,7 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
         default:
           // Internal error
           sw = 0x6800 | (e & 0x7FF);
+          reset_app_context();
           break;
         }
         // Unexpected exception => report
@@ -2585,6 +2665,8 @@ void sample_main(void) {
                     THROW(0x6982);
                 }
 
+                PRINTF("New APDU received:\n%.*H\n", rx, G_io_apdu_buffer);
+
                 handleApdu(&flags, &tx);
             }
             CATCH(EXCEPTION_IO_RESET) {
@@ -2595,7 +2677,7 @@ void sample_main(void) {
                 case 0x6000:
                     // Wipe the transaction context and report the exception
                     sw = e;
-                    os_memset(&txContext, 0, sizeof(txContext));
+                    reset_app_context();
                     break;
                 case 0x9000:
                     // All is well
@@ -2604,6 +2686,7 @@ void sample_main(void) {
                 default:
                     // Internal error
                     sw = 0x6800 | (e & 0x7FF);
+                    reset_app_context();
                     break;
                 }
                 if (e != 0x9000) {
@@ -2748,7 +2831,7 @@ __attribute__((section(".boot"))) int main(int arg0) {
         chainConfig = (chain_config_t *)PIC(&C_chain_config);
     }
 
-    os_memset(&txContext, 0, sizeof(txContext));
+    reset_app_context();
 
     // ensure exception will work as planned
     os_boot();

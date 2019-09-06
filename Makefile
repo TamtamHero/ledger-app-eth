@@ -27,7 +27,7 @@ APP_LOAD_PARAMS += --path "45'"
 
 APPVERSION_M=1
 APPVERSION_N=2
-APPVERSION_P=3
+APPVERSION_P=9
 APPVERSION=$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)
 APP_LOAD_FLAGS= --appFlags 0x240 --dep Ethereum:$(APPVERSION)
 
@@ -143,9 +143,13 @@ else ifeq ($(CHAIN),tobalaba)
 APP_LOAD_PARAMS += --path "44'/401697'"
 DEFINES += CHAINID_UPCASE=\"TOBALABA\" CHAINID_COINNAME=\"TOBALABA\" CHAIN_KIND=CHAIN_KIND_TOBALABA CHAIN_ID=401697
 APPNAME = "Tobalaba"
+else ifeq ($(CHAIN),dexon)
+APP_LOAD_PARAMS += --path "44'/237'"
+DEFINES += CHAINID_UPCASE=\"DEXON\" CHAINID_COINNAME=\"DXN\" CHAIN_KIND=CHAIN_KIND_DEXON CHAIN_ID=237
+APPNAME = "DEXON"
 else
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
-$(error Unsupported CHAIN - use ethereum, ethereum_classic, expanse, poa, artis_sigma1, artis_tau1, rsk, rsk_testnet, ubiq, wanchain, kusd, musicoin, pirl, akroma, atheios, callisto, ethersocial, ellaism, ether1, ethergem, gochain, mix, reosc, hpb, tomochain, tobalaba)
+$(error Unsupported CHAIN - use ethereum, ethereum_classic, expanse, poa, artis_sigma1, artis_tau1, rsk, rsk_testnet, ubiq, wanchain, kusd, musicoin, pirl, akroma, atheios, callisto, ethersocial, ellaism, ether1, ethergem, gochain, mix, reosc, hpb, tomochain, tobalaba, dexon)
 endif
 endif
 
@@ -172,10 +176,8 @@ all: default
 # Platform #
 ############
 
-DEFINES   += OS_IO_SEPROXYHAL IO_SEPROXYHAL_BUFFER_SIZE_B=128
+DEFINES   += OS_IO_SEPROXYHAL
 DEFINES   += HAVE_BAGL HAVE_SPRINTF
-#DEFINES   += HAVE_PRINTF PRINTF=screen_printf
-DEFINES   += PRINTF\(...\)=
 DEFINES   += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=6 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
 DEFINES   += LEDGER_MAJOR_VERSION=$(APPVERSION_M) LEDGER_MINOR_VERSION=$(APPVERSION_N) LEDGER_PATCH_VERSION=$(APPVERSION_P)
 
@@ -184,26 +186,42 @@ DEFINES   += HAVE_U2F HAVE_IO_U2F
 DEFINES   += U2F_PROXY_MAGIC=\"w0w\"
 DEFINES   += USB_SEGMENT_SIZE=64
 DEFINES   += BLE_SEGMENT_SIZE=32 #max MTU, min 20
+DEFINES   += UNUSED\(x\)=\(void\)x
+DEFINES   += APPVERSION=\"$(APPVERSION)\"
 
 WEBUSB_URL     = www.ledgerwallet.com
 DEFINES       += HAVE_WEBUSB WEBUSB_URL_SIZE_B=$(shell echo -n $(WEBUSB_URL) | wc -c) WEBUSB_URL=$(shell echo -n $(WEBUSB_URL) | sed -e "s/./\\\'\0\\\',/g")
 
-DEFINES   += UNUSED\(x\)=\(void\)x
-DEFINES   += APPVERSION=\"$(APPVERSION)\"
-
-DEFINES   += CX_COMPLIANCE_141
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
+DEFINES   += IO_SEPROXYHAL_BUFFER_SIZE_B=300
 DEFINES   += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000
 DEFINES   += HAVE_BLE_APDU # basic ledger apdu transport over BLE
 
-DEFINES   += HAVE_GLO096 HAVE_UX_LEGACY
+DEFINES   += HAVE_GLO096
 DEFINES   += HAVE_BAGL BAGL_WIDTH=128 BAGL_HEIGHT=64
 DEFINES   += HAVE_BAGL_ELLIPSIS # long label truncation feature
 DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
 DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
 DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
+DEFINES		  += HAVE_UX_FLOW
+else
+DEFINES   += IO_SEPROXYHAL_BUFFER_SIZE_B=128
 endif
+
+# Enabling debug PRINTF
+DEBUG = 0
+ifneq ($(DEBUG),0)
+ifeq ($(TARGET_NAME),TARGET_NANOX)
+DEFINES   += HAVE_PRINTF PRINTF=mcu_usb_printf
+else
+DEFINES   += HAVE_PRINTF PRINTF=screen_printf
+endif
+else
+DEFINES   += PRINTF\(...\)=
+endif
+
+
 
 ifneq ($(NOCONSENT),)
 DEFINES   += NO_CONSENT
@@ -263,4 +281,4 @@ include $(BOLOS_SDK)/Makefile.rules
 dep/%.d: %.c Makefile
 
 listvariants:
-	@echo VARIANTS CHAIN ethereum ethereum_classic expanse poa artis_sigma1 artis_tau1 rsk rsk_testnet ubiq wanchain kusd pirl akroma atheios callisto ethersocial ether1 gochain musicoin ethergem mix ellaism reosc hpb tomochain tobalaba
+	@echo VARIANTS CHAIN ethereum ethereum_classic expanse poa  artis_sigma1 artis_tau1 rsk rsk_testnet ubiq wanchain kusd pirl akroma atheios callisto ethersocial ether1 gochain musicoin ethergem mix ellaism reosc hpb tomochain tobalaba dexon
