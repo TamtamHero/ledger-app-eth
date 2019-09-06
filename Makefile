@@ -27,9 +27,9 @@ APP_LOAD_PARAMS += --path "45'"
 
 APPVERSION_M=1
 APPVERSION_N=2
-APPVERSION_P=0
+APPVERSION_P=3
 APPVERSION=$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)
-APP_LOAD_FLAGS= --appFlags 0x40 --dep Ethereum:$(APPVERSION)
+APP_LOAD_FLAGS= --appFlags 0x240 --dep Ethereum:$(APPVERSION)
 
 ifeq ($(CHAIN),)
 CHAIN=ethereum
@@ -41,7 +41,7 @@ APP_LOAD_PARAMS += --path "44'/60'"
 DEFINES += CHAINID_UPCASE=\"ETHEREUM\" CHAINID_COINNAME=\"ETH\" CHAIN_KIND=CHAIN_KIND_ETHEREUM CHAIN_ID=0
 APPNAME = "Ethereum"
 DEFINES_LIB=
-APP_LOAD_FLAGS=--appFlags 0x840
+APP_LOAD_FLAGS=--appFlags 0xa40
 else ifeq ($(CHAIN),ellaism)
 APP_LOAD_PARAMS += --path "44'/163'"
 DEFINES += CHAINID_UPCASE=\"ELLA\" CHAINID_COINNAME=\"ELLA\" CHAIN_KIND=CHAIN_KIND_ELLAISM CHAIN_ID=64
@@ -72,15 +72,15 @@ APP_LOAD_PARAMS += --path "44'/60'"
 DEFINES += CHAINID_UPCASE=\"POA\" CHAINID_COINNAME=\"POA\" CHAIN_KIND=CHAIN_KIND_POA CHAIN_ID=99
 APPNAME = "POA"
 else ifeq ($(CHAIN),artis_sigma1)
-APP_LOAD_PARAMS += --path "44'/60'"
+APP_LOAD_PARAMS += --path "44'/246529'"
 DEFINES += CHAINID_UPCASE=\"ARTISSIGMA1\" CHAINID_COINNAME=\"ATS\" CHAIN_KIND=CHAIN_KIND_ARTIS_SIGMA1 CHAIN_ID=246529
 APPNAME = "ARTIS sigma1"
 else ifeq ($(CHAIN),artis_tau1)
-APP_LOAD_PARAMS += --path "44'/60'"
+APP_LOAD_PARAMS += --path "44'/246785'"
 DEFINES += CHAINID_UPCASE=\"ARTISTAU1\" CHAINID_COINNAME=\"ATS\" CHAIN_KIND=CHAIN_KIND_ARTIS_TAU1 CHAIN_ID=246785
 APPNAME = "ARTIS tau1"
 else ifeq ($(CHAIN),rsk)
-APP_LOAD_PARAMS += --path "44'/137'"
+APP_LOAD_PARAMS += --path "44'/137'" --path "44'/00'"
 DEFINES += CHAINID_UPCASE=\"RSK\" CHAINID_COINNAME=\"RBTC\" CHAIN_KIND=CHAIN_KIND_RSK CHAIN_ID=30
 APPNAME = "RSK"
 else ifeq ($(CHAIN),rsk_testnet)
@@ -139,9 +139,13 @@ else ifeq ($(CHAIN),tomochain)
 APP_LOAD_PARAMS += --path "44'/889'"
 DEFINES += CHAINID_UPCASE=\"TOMOCHAIN\" CHAINID_COINNAME=\"TOMO\" CHAIN_KIND=CHAIN_KIND_TOMOCHAIN CHAIN_ID=88
 APPNAME = "TomoChain"
+else ifeq ($(CHAIN),tobalaba)
+APP_LOAD_PARAMS += --path "44'/401697'"
+DEFINES += CHAINID_UPCASE=\"TOBALABA\" CHAINID_COINNAME=\"TOBALABA\" CHAIN_KIND=CHAIN_KIND_TOBALABA CHAIN_ID=401697
+APPNAME = "Tobalaba"
 else
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
-$(error Unsupported CHAIN - use ethereum, ethereum_classic, expanse, poa, artis_sigma1, artis_tau1, rsk, rsk_testnet, ubiq, wanchain, kusd, musicoin, pirl, akroma, atheios, callisto, ethersocial, ellaism, ether1, ethergem, gochain, mix, reosc, hpb, tomochain)
+$(error Unsupported CHAIN - use ethereum, ethereum_classic, expanse, poa, artis_sigma1, artis_tau1, rsk, rsk_testnet, ubiq, wanchain, kusd, musicoin, pirl, akroma, atheios, callisto, ethersocial, ellaism, ether1, ethergem, gochain, mix, reosc, hpb, tomochain, tobalaba)
 endif
 endif
 
@@ -152,7 +156,11 @@ DEFINES += $(DEFINES_LIB)
 ifeq ($(TARGET_NAME),TARGET_BLUE)
 ICONNAME=blue_app_$(CHAIN).gif
 else
+ifeq ($(TARGET_NAME), TARGET_NANOX)
+ICONNAME=nanox_app_$(CHAIN).gif
+else
 ICONNAME=nanos_app_$(CHAIN).gif
+endif
 endif
 
 ################
@@ -184,6 +192,24 @@ DEFINES   += UNUSED\(x\)=\(void\)x
 DEFINES   += APPVERSION=\"$(APPVERSION)\"
 
 DEFINES   += CX_COMPLIANCE_141
+
+ifeq ($(TARGET_NAME),TARGET_NANOX)
+DEFINES   += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000
+DEFINES   += HAVE_BLE_APDU # basic ledger apdu transport over BLE
+
+DEFINES   += HAVE_GLO096 HAVE_UX_LEGACY
+DEFINES   += HAVE_BAGL BAGL_WIDTH=128 BAGL_HEIGHT=64
+DEFINES   += HAVE_BAGL_ELLIPSIS # long label truncation feature
+DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
+DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
+DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
+endif
+
+ifneq ($(NOCONSENT),)
+DEFINES   += NO_CONSENT
+endif
+
+#DEFINES   += HAVE_TOKENS_LIST # Do not activate external ERC-20 support yet
 
 ##############
 #  Compiler  #
@@ -219,6 +245,10 @@ include $(BOLOS_SDK)/Makefile.glyphs
 ### variables processed by the common makefile.rules of the SDK to grab source files and include dirs
 APP_SOURCE_PATH  += src_common src
 SDK_SOURCE_PATH  += lib_stusb lib_stusb_impl lib_u2f
+ifeq ($(TARGET_NAME),TARGET_NANOX)
+SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
+SDK_SOURCE_PATH  += lib_ux
+endif
 
 load: all
 	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
@@ -233,4 +263,4 @@ include $(BOLOS_SDK)/Makefile.rules
 dep/%.d: %.c Makefile
 
 listvariants:
-	@echo VARIANTS CHAIN ethereum ethereum_classic expanse poa artis_sigma1 artis_tau1 rsk rsk_testnet ubiq wanchain kusd pirl akroma atheios callisto ethersocial ether1 gochain musicoin ethergem mix ellaism reosc hpb tomochain
+	@echo VARIANTS CHAIN ethereum ethereum_classic expanse poa artis_sigma1 artis_tau1 rsk rsk_testnet ubiq wanchain kusd pirl akroma atheios callisto ethersocial ether1 gochain musicoin ethergem mix ellaism reosc hpb tomochain tobalaba
