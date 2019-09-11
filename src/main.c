@@ -1896,6 +1896,12 @@ tokenDefinition_t* getKnownToken() {
         case CHAIN_KIND_DEXON:
             numTokens = NUM_TOKENS_DEXON;
             break;
+        case CHAIN_KIND_VOLTA:
+            numTokens = NUM_TOKENS_VOLTA;
+            break;
+        case CHAIN_KIND_EWC:
+            numTokens = NUM_TOKENS_EWC;
+            break;
     }
     for (i=0; i<numTokens; i++) {
         switch(chainConfig->kind) {
@@ -1976,6 +1982,12 @@ tokenDefinition_t* getKnownToken() {
                 break;
             case CHAIN_KIND_DEXON:
                 currentToken = (tokenDefinition_t *)PIC(&TOKENS_DEXON[i]);
+                break;
+            case CHAIN_KIND_VOLTA:
+                currentToken = (tokenDefinition_t *)PIC(&TOKENS_VOLTA[i]);
+                break;
+            case CHAIN_KIND_EWC:
+                currentToken = (tokenDefinition_t *)PIC(&TOKENS_EWC[i]);
                 break;
         }
         if (os_memcmp(currentToken->address, tmpContent.txContent.destination, 20) == 0) {
