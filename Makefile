@@ -143,6 +143,10 @@ else ifeq ($(CHAIN),tobalaba)
 APP_LOAD_PARAMS += --path "44'/401697'"
 DEFINES += CHAINID_UPCASE=\"TOBALABA\" CHAINID_COINNAME=\"TOBALABA\" CHAIN_KIND=CHAIN_KIND_TOBALABA CHAIN_ID=401697
 APPNAME = "Tobalaba"
+else ifeq ($(CHAIN),webchain)
+APP_LOAD_PARAMS += --path "44'/227'"
+DEFINES += CHAINID_UPCASE=\"WEBCHAIN\" CHAINID_COINNAME=\"WEB\" CHAIN_KIND=CHAIN_KIND_WEBCHAIN CHAIN_ID=24484
+APPNAME = "Webchain"
 else ifeq ($(CHAIN),dexon)
 APP_LOAD_PARAMS += --path "44'/237'"
 DEFINES += CHAINID_UPCASE=\"DEXON\" CHAINID_COINNAME=\"DXN\" CHAIN_KIND=CHAIN_KIND_DEXON CHAIN_ID=237
@@ -157,7 +161,7 @@ DEFINES += CHAINID_UPCASE=\"EWC\" CHAINID_COINNAME=\"EWC\" CHAIN_KIND=CHAIN_KIND
 APPNAME = "EnergyWebChain"
 else
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
-$(error Unsupported CHAIN - use ethereum, ethereum_classic, expanse, poa, artis_sigma1, artis_tau1, rsk, rsk_testnet, ubiq, wanchain, kusd, musicoin, pirl, akroma, atheios, callisto, ethersocial, ellaism, ether1, ethergem, gochain, mix, reosc, hpb, tomochain, tobalaba, dexon, volta, ewc)
+$(error Unsupported CHAIN - use ethereum, ethereum_classic, expanse, poa, artis_sigma1, artis_tau1, rsk, rsk_testnet, ubiq, wanchain, kusd, musicoin, pirl, akroma, atheios, callisto, ethersocial, ellaism, ether1, ethergem, gochain, mix, reosc, hpb, tomochain, tobalaba, dexon, volta, ewc, webchain)
 endif
 endif
 
@@ -212,7 +216,7 @@ DEFINES   += HAVE_BAGL_ELLIPSIS # long label truncation feature
 DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
 DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
 DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
-DEFINES		  += HAVE_UX_FLOW
+DEFINES   += HAVE_UX_FLOW
 else
 DEFINES   += IO_SEPROXYHAL_BUFFER_SIZE_B=128
 endif
@@ -288,4 +292,4 @@ include $(BOLOS_SDK)/Makefile.rules
 dep/%.d: %.c Makefile
 
 listvariants:
-	@echo VARIANTS CHAIN ethereum ethereum_classic expanse poa  artis_sigma1 artis_tau1 rsk rsk_testnet ubiq wanchain kusd pirl akroma atheios callisto ethersocial ether1 gochain musicoin ethergem mix ellaism reosc hpb tomochain tobalaba dexon volta ewc
+	@echo VARIANTS CHAIN ethereum ethereum_classic expanse poa  artis_sigma1 artis_tau1 rsk rsk_testnet ubiq wanchain kusd pirl akroma atheios callisto ethersocial ether1 gochain musicoin ethergem mix ellaism reosc hpb tomochain tobalaba dexon volta ewc webchain

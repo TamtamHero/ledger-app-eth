@@ -1902,6 +1902,9 @@ tokenDefinition_t* getKnownToken() {
         case CHAIN_KIND_EWC:
             numTokens = NUM_TOKENS_EWC;
             break;
+        case CHAIN_KIND_WEBCHAIN:
+            numTokens = NUM_TOKENS_WEBCHAIN;
+            break;
     }
     for (i=0; i<numTokens; i++) {
         switch(chainConfig->kind) {
@@ -1988,6 +1991,9 @@ tokenDefinition_t* getKnownToken() {
                 break;
             case CHAIN_KIND_EWC:
                 currentToken = (tokenDefinition_t *)PIC(&TOKENS_EWC[i]);
+                break;
+            case CHAIN_KIND_DEXON:
+                currentToken = (tokenDefinition_t *)PIC(&TOKENS_DEXON[i]);
                 break;
         }
         if (os_memcmp(currentToken->address, tmpContent.txContent.destination, 20) == 0) {

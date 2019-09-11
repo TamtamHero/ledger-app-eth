@@ -1192,4 +1192,6 @@ const tokenDefinition_t const TOKENS_ARTIS_SIGMA1[NUM_TOKENS_ARTIS_SIGMA1] = {};
 
 const tokenDefinition_t const TOKENS_ARTIS_TAU1[NUM_TOKENS_ARTIS_TAU1] = {};
 
+const tokenDefinition_t const TOKENS_WEBCHAIN[NUM_TOKENS_WEBCHAIN] = {};
+
 #endif
