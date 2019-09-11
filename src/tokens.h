@@ -52,6 +52,11 @@ typedef struct tokenDefinition_t {
 #define NUM_TOKENS_TOMOCHAIN 0
 #define NUM_TOKENS_TOBALABA 0
 #define NUM_TOKENS_DEXON 0
+#define NUM_TOKENS_VOLTA 0
+#define NUM_TOKENS_EWC 0
+#define NUM_TOKENS_ARTIS_SIGMA1 0
+#define NUM_TOKENS_ARTIS_TAU1 0
+#define NUM_TOKENS_WEBCHAIN 0
 #define NUM_TOKENS_THUNDERCORE 0
 
 extern tokenDefinition_t const TOKENS_AKROMA[NUM_TOKENS_AKROMA];
@@ -78,6 +83,11 @@ extern tokenDefinition_t const TOKENS_HPB[NUM_TOKENS_HPB];
 extern tokenDefinition_t const TOKENS_TOMOCHAIN[NUM_TOKENS_TOMOCHAIN];
 extern tokenDefinition_t const TOKENS_TOBALABA[NUM_TOKENS_TOBALABA];
 extern tokenDefinition_t const TOKENS_DEXON[NUM_TOKENS_DEXON];
+extern tokenDefinition_t const TOKENS_VOLTA[NUM_TOKENS_VOLTA];
+extern tokenDefinition_t const TOKENS_EWC[NUM_TOKENS_EWC];
+extern tokenDefinition_t const TOKENS_ARTIS_SIGMA1[NUM_TOKENS_ARTIS_SIGMA1];
+extern tokenDefinition_t const TOKENS_ARTIS_TAU1[NUM_TOKENS_ARTIS_TAU1];
+extern tokenDefinition_t const TOKENS_WEBCHAIN[NUM_TOKENS_WEBCHAIN];
 extern tokenDefinition_t const TOKENS_THUNDERCORE[NUM_TOKENS_THUNDERCORE];
 
 #endif /* HAVE_TOKENS_LIST */

@@ -27,7 +27,7 @@ APP_LOAD_PARAMS += --path "45'"
 
 APPVERSION_M=1
 APPVERSION_N=2
-APPVERSION_P=9
+APPVERSION_P=10
 APPVERSION=$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)
 APP_LOAD_FLAGS= --appFlags 0x240 --dep Ethereum:$(APPVERSION)
 
@@ -71,6 +71,14 @@ else ifeq ($(CHAIN),poa)
 APP_LOAD_PARAMS += --path "44'/60'"
 DEFINES += CHAINID_UPCASE=\"POA\" CHAINID_COINNAME=\"POA\" CHAIN_KIND=CHAIN_KIND_POA CHAIN_ID=99
 APPNAME = "POA"
+else ifeq ($(CHAIN),artis_sigma1)
+APP_LOAD_PARAMS += --path "44'/246529'"
+DEFINES += CHAINID_UPCASE=\"ARTISSIGMA1\" CHAINID_COINNAME=\"ATS\" CHAIN_KIND=CHAIN_KIND_ARTIS_SIGMA1 CHAIN_ID=246529
+APPNAME = "ARTIS sigma1"
+else ifeq ($(CHAIN),artis_tau1)
+APP_LOAD_PARAMS += --path "44'/246785'"
+DEFINES += CHAINID_UPCASE=\"ARTISTAU1\" CHAINID_COINNAME=\"ATS\" CHAIN_KIND=CHAIN_KIND_ARTIS_TAU1 CHAIN_ID=246785
+APPNAME = "ARTIS tau1"
 else ifeq ($(CHAIN),rsk)
 APP_LOAD_PARAMS += --path "44'/137'" --path "44'/00'"
 DEFINES += CHAINID_UPCASE=\"RSK\" CHAINID_COINNAME=\"RBTC\" CHAIN_KIND=CHAIN_KIND_RSK CHAIN_ID=30
@@ -135,17 +143,29 @@ else ifeq ($(CHAIN),tobalaba)
 APP_LOAD_PARAMS += --path "44'/401697'"
 DEFINES += CHAINID_UPCASE=\"TOBALABA\" CHAINID_COINNAME=\"TOBALABA\" CHAIN_KIND=CHAIN_KIND_TOBALABA CHAIN_ID=401697
 APPNAME = "Tobalaba"
+else ifeq ($(CHAIN),webchain)
+APP_LOAD_PARAMS += --path "44'/227'"
+DEFINES += CHAINID_UPCASE=\"WEBCHAIN\" CHAINID_COINNAME=\"WEB\" CHAIN_KIND=CHAIN_KIND_WEBCHAIN CHAIN_ID=24484
+APPNAME = "Webchain"
 else ifeq ($(CHAIN),dexon)
 APP_LOAD_PARAMS += --path "44'/237'"
 DEFINES += CHAINID_UPCASE=\"DEXON\" CHAINID_COINNAME=\"DXN\" CHAIN_KIND=CHAIN_KIND_DEXON CHAIN_ID=237
 APPNAME = "DEXON"
+else ifeq ($(CHAIN),volta)
+APP_LOAD_PARAMS += --path "44'/73799'"
+DEFINES += CHAINID_UPCASE=\"VOLTA\" CHAINID_COINNAME=\"VOLTA\" CHAIN_KIND=CHAIN_KIND_VOLTA CHAIN_ID=73799
+APPNAME = "Volta"
+else ifeq ($(CHAIN),ewc)
+APP_LOAD_PARAMS += --path "44'/246'"
+DEFINES += CHAINID_UPCASE=\"EWC\" CHAINID_COINNAME=\"EWC\" CHAIN_KIND=CHAIN_KIND_EWC CHAIN_ID=246
+APPNAME = "EnergyWebChain"
 else ifeq ($(CHAIN),thundercore)
 APP_LOAD_PARAMS += --path "44'/1001'"
 DEFINES += CHAINID_UPCASE=\"THUNDERCORE\" CHAINID_COINNAME=\"TT\" CHAIN_KIND=CHAIN_KIND_THUNDERCORE CHAIN_ID=108
 APPNAME = "ThunderCore"
 else
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
-$(error Unsupported CHAIN - use ethereum, ethereum_classic, expanse, poa, rsk, rsk_testnet, ubiq, wanchain, kusd, musicoin, pirl, akroma, atheios, callisto, ethersocial, ellaism, ether1, ethergem, gochain, mix, reosc, hpb, tomochain, tobalaba, dexon, thundercore)
+$(error Unsupported CHAIN - use ethereum, ethereum_classic, expanse, poa, artis_sigma1, artis_tau1, rsk, rsk_testnet, ubiq, wanchain, kusd, musicoin, pirl, akroma, atheios, callisto, ethersocial, ellaism, ether1, ethergem, gochain, mix, reosc, hpb, tomochain, tobalaba, dexon, volta, ewc, webchain, thundercore)
 endif
 endif
 
@@ -275,4 +295,4 @@ include $(BOLOS_SDK)/Makefile.rules
 dep/%.d: %.c Makefile
 
 listvariants:
-	@echo VARIANTS CHAIN ethereum ethereum_classic expanse poa rsk rsk_testnet ubiq wanchain kusd pirl akroma atheios callisto ethersocial ether1 gochain musicoin ethergem mix ellaism reosc hpb tomochain tobalaba dexon thundercore
+	@echo VARIANTS CHAIN ethereum ethereum_classic expanse poa  artis_sigma1 artis_tau1 rsk rsk_testnet ubiq wanchain kusd pirl akroma atheios callisto ethersocial ether1 gochain musicoin ethergem mix ellaism reosc hpb tomochain tobalaba dexon volta ewc webchain thundercore

@@ -1833,6 +1833,12 @@ tokenDefinition_t* getKnownToken() {
         case CHAIN_KIND_POA:
             numTokens = NUM_TOKENS_POA;
             break;
+        case CHAIN_KIND_ARTIS_SIGMA1:
+            numTokens = NUM_TOKENS_ARTIS_SIGMA1;
+            break;
+        case CHAIN_KIND_ARTIS_TAU1:
+            numTokens = NUM_TOKENS_ARTIS_TAU1;
+            break;
         case CHAIN_KIND_RSK:
             numTokens = NUM_TOKENS_RSK;
             break;
@@ -1890,6 +1896,15 @@ tokenDefinition_t* getKnownToken() {
         case CHAIN_KIND_DEXON:
             numTokens = NUM_TOKENS_DEXON;
             break;
+        case CHAIN_KIND_VOLTA:
+            numTokens = NUM_TOKENS_VOLTA;
+            break;
+        case CHAIN_KIND_EWC:
+            numTokens = NUM_TOKENS_EWC;
+            break;
+        case CHAIN_KIND_WEBCHAIN:
+            numTokens = NUM_TOKENS_WEBCHAIN;
+            break;
         case CHAIN_KIND_THUNDERCORE:
             numTokens = NUM_TOKENS_THUNDERCORE;
             break;
@@ -1909,8 +1924,14 @@ tokenDefinition_t* getKnownToken() {
                 currentToken = (tokenDefinition_t *)PIC(&TOKENS_PIRL[i]);
                 break;
             case CHAIN_KIND_POA:
-                    currentToken = (tokenDefinition_t *)PIC(&TOKENS_POA[i]);
-                    break;
+                currentToken = (tokenDefinition_t *)PIC(&TOKENS_POA[i]);
+                break;
+            case CHAIN_KIND_ARTIS_SIGMA1:
+                currentToken = (tokenDefinition_t *)PIC(&TOKENS_ARTIS_SIGMA1[i]);
+                break;
+            case CHAIN_KIND_ARTIS_TAU1:
+                currentToken = (tokenDefinition_t *)PIC(&TOKENS_ARTIS_TAU1[i]);
+                break;
             case CHAIN_KIND_RSK:
                 currentToken = (tokenDefinition_t *)PIC(&TOKENS_RSK[i]);
                 break;
@@ -1968,9 +1989,18 @@ tokenDefinition_t* getKnownToken() {
             case CHAIN_KIND_DEXON:
                 currentToken = (tokenDefinition_t *)PIC(&TOKENS_DEXON[i]);
                 break;
+            case CHAIN_KIND_VOLTA:
+                currentToken = (tokenDefinition_t *)PIC(&TOKENS_VOLTA[i]);
+                break;
+            case CHAIN_KIND_EWC:
+                currentToken = (tokenDefinition_t *)PIC(&TOKENS_EWC[i]);
+                break;
+            case CHAIN_KIND_WEBCHAIN:
+                currentToken = (tokenDefinition_t *)PIC(&TOKENS_WEBCHAIN[i]);
+                break;
             case CHAIN_KIND_THUNDERCORE:
                 currentToken = (tokenDefinition_t *)PIC(&TOKENS_THUNDERCORE[i]);
-                break;
+                break
         }
         if (os_memcmp(currentToken->address, tmpContent.txContent.destination, 20) == 0) {
             return currentToken;
