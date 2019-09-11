@@ -159,9 +159,13 @@ else ifeq ($(CHAIN),ewc)
 APP_LOAD_PARAMS += --path "44'/246'"
 DEFINES += CHAINID_UPCASE=\"EWC\" CHAINID_COINNAME=\"EWC\" CHAIN_KIND=CHAIN_KIND_EWC CHAIN_ID=246
 APPNAME = "EnergyWebChain"
+else ifeq ($(CHAIN),thundercore)
+APP_LOAD_PARAMS += --path "44'/1001'"
+DEFINES += CHAINID_UPCASE=\"THUNDERCORE\" CHAINID_COINNAME=\"TT\" CHAIN_KIND=CHAIN_KIND_THUNDERCORE CHAIN_ID=108
+APPNAME = "ThunderCore"
 else
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
-$(error Unsupported CHAIN - use ethereum, ethereum_classic, expanse, poa, artis_sigma1, artis_tau1, rsk, rsk_testnet, ubiq, wanchain, kusd, musicoin, pirl, akroma, atheios, callisto, ethersocial, ellaism, ether1, ethergem, gochain, mix, reosc, hpb, tomochain, tobalaba, dexon, volta, ewc, webchain)
+$(error Unsupported CHAIN - use ethereum, ethereum_classic, expanse, poa, artis_sigma1, artis_tau1, rsk, rsk_testnet, ubiq, wanchain, kusd, musicoin, pirl, akroma, atheios, callisto, ethersocial, ellaism, ether1, ethergem, gochain, mix, reosc, hpb, tomochain, tobalaba, dexon, volta, ewc, webchain, thundercore)
 endif
 endif
 
@@ -233,7 +237,6 @@ else
 DEFINES   += PRINTF\(...\)=
 endif
 
-
 ifneq ($(NOCONSENT),)
 DEFINES   += NO_CONSENT
 endif
@@ -292,4 +295,4 @@ include $(BOLOS_SDK)/Makefile.rules
 dep/%.d: %.c Makefile
 
 listvariants:
-	@echo VARIANTS CHAIN ethereum ethereum_classic expanse poa  artis_sigma1 artis_tau1 rsk rsk_testnet ubiq wanchain kusd pirl akroma atheios callisto ethersocial ether1 gochain musicoin ethergem mix ellaism reosc hpb tomochain tobalaba dexon volta ewc webchain
+	@echo VARIANTS CHAIN ethereum ethereum_classic expanse poa  artis_sigma1 artis_tau1 rsk rsk_testnet ubiq wanchain kusd pirl akroma atheios callisto ethersocial ether1 gochain musicoin ethergem mix ellaism reosc hpb tomochain tobalaba dexon volta ewc webchain thundercore
