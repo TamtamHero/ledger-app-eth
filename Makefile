@@ -139,9 +139,17 @@ else ifeq ($(CHAIN),dexon)
 APP_LOAD_PARAMS += --path "44'/237'"
 DEFINES += CHAINID_UPCASE=\"DEXON\" CHAINID_COINNAME=\"DXN\" CHAIN_KIND=CHAIN_KIND_DEXON CHAIN_ID=237
 APPNAME = "DEXON"
+else ifeq ($(CHAIN),volta)
+APP_LOAD_PARAMS += --path "44'/73799'"
+DEFINES += CHAINID_UPCASE=\"VOLTA\" CHAINID_COINNAME=\"VOLTA\" CHAIN_KIND=CHAIN_KIND_VOLTA CHAIN_ID=73799
+APPNAME = "Volta"
+else ifeq ($(CHAIN),ewc)
+APP_LOAD_PARAMS += --path "44'/246'"
+DEFINES += CHAINID_UPCASE=\"EWC\" CHAINID_COINNAME=\"EWC\" CHAIN_KIND=CHAIN_KIND_EWC CHAIN_ID=246
+APPNAME = "EnergyWebChain"
 else
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
-$(error Unsupported CHAIN - use ethereum, ethereum_classic, expanse, poa, rsk, rsk_testnet, ubiq, wanchain, kusd, musicoin, pirl, akroma, atheios, callisto, ethersocial, ellaism, ether1, ethergem, gochain, mix, reosc, hpb, tomochain, tobalaba, dexon)
+$(error Unsupported CHAIN - use ethereum, ethereum_classic, expanse, poa, rsk, rsk_testnet, ubiq, wanchain, kusd, musicoin, pirl, akroma, atheios, callisto, ethersocial, ellaism, ether1, ethergem, gochain, mix, reosc, hpb, tomochain, tobalaba, dexon, volta, ewc)
 endif
 endif
 
@@ -204,16 +212,14 @@ endif
 # Enabling debug PRINTF
 DEBUG = 0
 ifneq ($(DEBUG),0)
-
-        ifeq ($(TARGET_NAME),TARGET_NANOX)
-                DEFINES   += HAVE_PRINTF PRINTF=mcu_usb_printf
-        else
-                DEFINES   += HAVE_PRINTF PRINTF=screen_printf
-        endif
+ifeq ($(TARGET_NAME),TARGET_NANOX)
+DEFINES   += HAVE_PRINTF PRINTF=mcu_usb_printf
 else
-        DEFINES   += PRINTF\(...\)=
+DEFINES   += HAVE_PRINTF PRINTF=screen_printf
 endif
-
+else
+DEFINES   += PRINTF\(...\)=
+endif
 
 
 ifneq ($(NOCONSENT),)
@@ -274,4 +280,4 @@ include $(BOLOS_SDK)/Makefile.rules
 dep/%.d: %.c Makefile
 
 listvariants:
-	@echo VARIANTS CHAIN ethereum ethereum_classic expanse poa rsk rsk_testnet ubiq wanchain kusd pirl akroma atheios callisto ethersocial ether1 gochain musicoin ethergem mix ellaism reosc hpb tomochain tobalaba dexon
+	@echo VARIANTS CHAIN ethereum ethereum_classic expanse poa rsk rsk_testnet ubiq wanchain kusd pirl akroma atheios callisto ethersocial ether1 gochain musicoin ethergem mix ellaism reosc hpb tomochain tobalaba dexon volta ewc
