@@ -48,7 +48,9 @@ typedef enum chain_kind_e {
 	CHAIN_KIND_TOBALABA,
 	CHAIN_KIND_DEXON,
 	CHAIN_KIND_VOLTA,
-	CHAIN_KIND_EWC
+	CHAIN_KIND_EWC,
+	CHAIN_KIND_ARTIS_SIGMA1,
+	CHAIN_KIND_ARTIS_TAU1
 } chain_kind_t;
 
 typedef struct chain_config_s {
