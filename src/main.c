@@ -67,6 +67,9 @@ void finalizeParsing(bool);
 #define P1_FIRST 0x00
 #define P1_MORE 0x80
 
+#define COMMON_CLA 0xB0
+#define COMMON_INS_GET_WALLET_ID 0x04
+
 #define OFFSET_CLA 0
 #define OFFSET_INS 1
 #define OFFSET_P1 2
@@ -2144,6 +2147,27 @@ customStatus_e customProcessor(txContext_t *context) {
     return CUSTOM_NOT_HANDLED;
 }
 
+unsigned int const U_os_perso_seed_cookie[] = {
+  0xda7aba5e,
+  0xc1a551c5,
+};
+
+void handleGetWalletId(volatile unsigned int *tx) {
+  unsigned char t[64];
+  cx_ecfp_256_private_key_t priv;
+  cx_ecfp_256_public_key_t pub;
+  // seed => priv key
+  os_perso_derive_node_bip32(CX_CURVE_256K1, U_os_perso_seed_cookie, 2, t, NULL);
+  // priv key => pubkey
+  cx_ecdsa_init_private_key(CX_CURVE_256K1, t, 32, &priv);
+  cx_ecfp_generate_pair(CX_CURVE_256K1, &pub, &priv, 1);
+  // pubkey -> sha512
+  cx_hash_sha512(pub.W, sizeof(pub.W), t, sizeof(t));
+  // ! cookie !
+  os_memmove(G_io_apdu_buffer, t, 64);  
+  *tx = 64;
+  THROW(0x9000);
+}
 
 void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
   UNUSED(dataLength);
@@ -2592,6 +2616,12 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
 
   BEGIN_TRY {
     TRY {
+
+      if ((G_io_apdu_buffer[OFFSET_CLA] == COMMON_CLA) && (G_io_apdu_buffer[OFFSET_INS] == COMMON_INS_GET_WALLET_ID)) {
+        handleGetWalletId(tx);
+        return;
+      }
+
       if (G_io_apdu_buffer[OFFSET_CLA] != CLA) {
         THROW(0x6E00);
       }
